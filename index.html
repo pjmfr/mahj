@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>American Mahjong Scorekeeper</title>
+    <!-- Tailwind CSS for modern utility styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for elegant serifs and clean UI text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f7f6f2;
+        }
+        .oriental-title {
+            font-family: 'Cinzel', serif;
+        }
+    </style>
+</head>
+<body class="text-stone-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Top Navigation Banner -->
+    <header class="bg-emerald-950 text-amber-100 shadow-md border-b border-amber-500/20 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-600 text-emerald-950 font-bold px-2.5 py-1 rounded border border-amber-400 text-xs shadow-sm uppercase tracking-wider">🀄 NMJL</div>
+                <h1 class="text-xl font-bold tracking-wide oriental-title">Four Winds Scorekeeper</h1>
+            </div>
+            <div class="text-xs font-medium tracking-widest text-amber-400/80 uppercase">
+                American Rules Matrix
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Content Body wrapper -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Game Configuration State Setup -->
+        <section id="setup-screen" class="max-w-xl mx-auto bg-white border border-stone-200 shadow-xl rounded-2xl p-6 sm:p-8 mt-4 transition-all duration-300">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-emerald-950 oriental-title">Begin a New Session</h2>
+                <p class="text-xs text-stone-500 mt-1">Assign player names below to instantiate the scoring engine ledger.</p>
+            </div>
+            
+            <form id="setup-form" onsubmit="startGame(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">East (Dealer Start)</label>
+                        <input type="text" id="p1-name" required value="Player 1" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-700 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">South Wind</label>
+                        <input type="text" id="p2-name" required value="Player 2" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-700 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">West Wind</label>
+                        <input type="text" id="p3-name" required value="Player 3" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-700 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">North Wind</label>
+                        <input type="text" id="p4-name" required value="Player 4" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-700 transition" />
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full py-3 bg-emerald-900 hover:bg-emerald-800 border border-emerald-950 text-amber-100 rounded-xl font-semibold text-sm uppercase tracking-wider shadow-md hover:shadow-lg transition duration-200">
+                        Initialize Score Registry
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Active Score Tracker Workspace Dashboard Component (Hidden initially) -->
+        <section id="game-dashboard" class="hidden space-y-6 animate-fadeIn">
+            
+            <!-- Realtime Points Totals Matrix Cards Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="player-scorecards">
+                <!-- Dynamically filled with player tiles via runtime controller -->
+            </div>
+
+            <!-- Dashboard Control Actions Palette -->
+            <div class="flex flex-wrap items-center justify-between gap-4 bg-white border border-stone-200 p-4 rounded-xl shadow-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span id="game-hand-counter" class="text-xs font-semibold text-stone-600 uppercase tracking-wider">Hand #1 Active</span>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button onclick="openHandModal()" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm transition">
+                        🀄 Record Hand Result
+                    </button>
+                    <button onclick="openPenaltyModal()" class="px-4 py-2.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm transition">
+                        ⚠️ Assess Penalty
+                    </button>
+                    <button onclick="undoLastHand()" id="undo-btn" disabled class="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-400 cursor-not-allowed rounded-lg text-xs font-bold uppercase tracking-wider transition">
+                        Undo Action
+                    </button>
+                    <button onclick="promptResetGame()" class="px-4 py-2.5 border border-stone-200 hover:bg-red-50 text-red-700 rounded-lg text-xs font-bold uppercase tracking-wider transition">
+                        Reset Game
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ledger Table Log Layout Container Matrix Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Left Hand Ledger History Feed list -->
+                <div class="lg:col-span-8 bg-white border border-stone-200 shadow-sm rounded-xl overflow-hidden">
+                    <div class="px-4 py-3 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-stone-600">Session Transaction Ledger</h3>
+                        <span class="text-[10px] bg-stone-200 text-stone-700 px-2 py-0.5 rounded font-bold uppercase" id="ledger-count-badge">0 Logs</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-stone-100/70 border-b border-stone-200 text-[11px] font-bold uppercase text-stone-500 tracking-wider">
+                                    <th class="py-3 px-4 w-16">Hand</th>
+                                    <th class="py-3 px-4">Action / Outcome</th>
+                                    <th class="py-3 px-4">Classification Details</th>
+                                    <th class="py-3 px-4">Base Pts</th>
+                                    <th class="py-3 px-4 text-right">Points Exchange Payouts</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-rows-container">
+                                <!-- Dynamic insertions -->
+                                <tr id="ledger-empty-row">
+                                    <td colspan="5" class="py-12 text-center text-stone-400 font-light text-xs">
+                                        No metrics logged in this session yet. Click actions above to register modifications.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Hand Reference Guideline Card component panel layout -->
+                <div class="lg:col-span-4 bg-emerald-950 text-amber-100 rounded-xl p-5 border border-amber-500/20 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold uppercase tracking-wider border-b border-amber-500/20 pb-2 oriental-title">American Rules Point Matrix</h3>
+                    <p class="text-xs text-stone-300 font-light leading-relaxed">
+                        Points are automatically extracted from losers and paid directly to the winner based on official National Mah Jongg League rules:
+                    </p>
+                    <ul class="space-y-2.5 text-xs text-stone-200">
+                        <li class="flex items-start space-x-2">
+                            <span class="text-amber-400 font-bold">👉</span>
+                            <span><strong>Win via Discard:</strong> Discarder pays 2× hand value. Other players pay 1× hand value. Winner receives total combination.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-amber-400 font-bold">👉</span>
+                            <span><strong>Win via Self-Pick:</strong> All three losing players pay double (2×) the value of the hand to the winner.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-amber-400 font-bold">👉</span>
+                            <span><strong>Jokerless Bonus:</strong> Doubles all payouts entirely (except for singles/pairs hands which inherently lack jokers).</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-amber-400 font-bold">👉</span>
+                            <span><strong>Exposed Penalties:</strong> Error infractions apply standalone point deductions without shifting active table positions or dealer winds.</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Interactive Hand Result Logger Input Modal System Overlay -->
+    <div id="hand-modal" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white max-w-lg w-full border border-stone-200 rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+            
+            <!-- Modal Header -->
+            <div class="bg-emerald-950 text-amber-100 px-6 py-4 flex items-center justify-between border-b border-amber-500/20">
+                <h3 class="text-base font-bold uppercase tracking-wider oriental-title">Record Hand Outcome</h3>
+                <button onclick="closeHandModal()" class="text-amber-200/60 hover:text-amber-100 transition p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Form Frame Panel Content Elements -->
+            <form id="hand-log-form" onsubmit="processHandLog(event)" class="p-6 space-y-4">
+                
+                <!-- Main Outcome Route selector row -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">Hand Evaluation Classification</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="outcome-win-btn" onclick="setOutcomeMode('win')" class="py-2.5 text-center text-xs font-bold rounded-lg border-2 border-emerald-700 bg-emerald-50 text-emerald-950 transition">
+                            Declared Mahjong Win
+                        </button>
+                        <button type="button" id="outcome-wall-btn" onclick="setOutcomeMode('wall')" class="py-2.5 text-center text-xs font-bold rounded-lg border border-stone-200 text-stone-500 bg-stone-50 hover:bg-stone-100 transition">
+                            Wall Game / Dead Hand
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conditional Fields Content Section (Displayed only when set to 'win') -->
+                <div id="conditional-win-fields" class="space-y-4 transition-all duration-200">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Winner selection -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Declared Winner</label>
+                            <select id="winner-select" onchange="updateDiscarderOptions()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-emerald-700 transition">
+                                <!-- Dynamic Player Option lists generated at start runtime -->
+                            </select>
+                        </div>
+                        <!-- Method of execution selection -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Winning Execution Method</label>
+                            <select id="method-select" onchange="toggleDiscarderDropdown()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-emerald-700 transition">
+                                <option value="self-pick">Self-Picked Tile</option>
+                                <option value="discard">Discarded by another Player</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Discarder specific selector box container -->
+                    <div id="discarder-container" class="hidden">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Discarder responsible for deal</label>
+                        <select id="discarder-select" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-emerald-700 transition">
+                            <!-- Populated runtime dynamically to exclude winner selection -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <!-- NMJL card point baseline values select -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">NMJL Base Card Point Value</label>
+                            <select id="card-value-select" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-emerald-700 transition">
+                                <option value="25">25 Points (Standard Base)</option>
+                                <option value="30">30 Points</option>
+                                <option value="35">35 Points</option>
+                                <option value="40">40 Points</option>
+                                <option value="45">45 Points</option>
+                                <option value="50">50 Points (Singles &amp; Pairs)</option>
+                            </select>
+                        </div>
+                        <!-- Checkbox multipliers flags -->
+                        <div class="flex items-center space-x-2 sm:pt-5">
+                            <input type="checkbox" id="jokerless-checkbox" class="w-4 h-4 rounded text-emerald-700 bg-stone-100 border-stone-300 focus:ring-emerald-700 focus:ring-2 cursor-pointer" />
+                            <label for="jokerless-checkbox" class="text-xs font-medium text-stone-700 cursor-pointer select-none">
+                                Jokerless Hand Bonus (×2 Points)
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Actions buttons trigger panel inside modal frame structure layout -->
+                <div class="pt-4 border-t border-stone-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeHandModal()" class="px-4 py-2 border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-lg text-xs font-bold uppercase tracking-wider transition">
+                        Dismiss
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-900 hover:bg-emerald-800 text-amber-100 rounded-lg text-xs font-bold uppercase tracking-wider transition shadow">
+                        Record to Ledger
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interactive Penalty Logger Input Modal System Overlay -->
+    <div id="penalty-modal" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white max-w-md w-full border border-stone-200 rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+            
+            <!-- Modal Header -->
+            <div class="bg-rose-950 text-rose-100 px-6 py-4 flex items-center justify-between border-b border-rose-500/20">
+                <h3 class="text-base font-bold uppercase tracking-wider oriental-title">Assess Rule Penalty</h3>
+                <button onclick="closePenaltyModal()" class="text-rose-200/60 hover:text-rose-100 transition p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Form Content -->
+            <form id="penalty-log-form" onsubmit="processPenaltyLog(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Select Penalized Player</label>
+                    <select id="penalty-player-select" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-rose-700 transition">
+                        <!-- Populated dynamically at runtime -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Infraction Classification</label>
+                    <select id="penalty-type-select" onchange="handlePenaltyTypeChange()" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-stone-800 focus:outline-none focus:border-rose-700 transition">
+                        <option value="10">Wrong Tile Exposure / Minor Error (-10 pts)</option>
+                        <option value="20">Miscalled Mahjong / Major Infraction (-20 pts)</option>
+                        <option value="25">Illegal Call from Wall (-25 pts)</option>
+                        <option value="custom">Custom Point Deduction</option>
+                    </select>
+                </div>
+
+                <div id="custom-penalty-container" class="hidden">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">Custom Point Penalty Amount</label>
+                    <input type="number" id="custom-penalty-input" min="1" value="5" class="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-700 transition" />
+                </div>
+
+                <!-- Actions buttons -->
+                <div class="pt-4 border-t border-stone-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closePenaltyModal()" class="px-4 py-2 border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-lg text-xs font-bold uppercase tracking-wider transition">
+                        Dismiss
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-rose-900 hover:bg-rose-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition shadow">
+                        Apply Penalty
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Global Client Notification Box Message element -->
+    <div id="app-toast" class="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-stone-900 text-white p-4 rounded-xl shadow-2xl border border-stone-800 flex items-center justify-between space-x-3 hidden transform translate-y-10 opacity-0 transition-all duration-300">
+        <div class="flex-1 text-xs font-medium text-stone-200" id="toast-message-content">
+            Notification default text.
+        </div>
+        <button onclick="dismissToast()" class="text-stone-400 hover:text-white text-xs font-bold uppercase">OK</button>
+    </div>
+
+    <!-- Application Confirmation Box Overlaid Modal Layer Container -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white max-w-sm w-full border border-stone-200 rounded-xl p-5 text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <h4 class="text-base font-bold text-stone-900 mb-2">Reset Session Ledger?</h4>
+            <p class="text-xs text-stone-500 font-light mb-5">This action clears all recorded historical point logs and resets player allocations.</p>
+            <div class="flex items-center justify-center space-x-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-lg text-xs font-bold uppercase transition">Cancel</button>
+                <button onclick="executeResetGame()" class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase transition">Reset Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimal Clean Footer Section -->
+    <footer class="bg-stone-100 border-t border-stone-200 text-center py-4 text-[11px] text-stone-400 font-medium tracking-wide">
+        Mahjong Scorecard Ledger Matrix Engine • Optimized for NMJL Rulebooks • © 2026
+    </footer>
+
+    <!-- Core Runtime State Architecture Logic Application Engine Script Matrix -->
+    <script>
+        // Core State Store Framework Definitions
+        let GAME_PLAYERS = []; 
+        let HANDS_HISTORY_LOG = []; 
+        let ACTIVE_HAND_NUMBER = 1;
+        let CURRENT_OUTCOME_MODE = 'win'; // 'win' or 'wall'
+
+        // Start lifecycle initialization setup router trigger routing engine parameters
+        function startGame(event) {
+            event.preventDefault();
+            
+            const name1 = document.getElementById('p1-name').value.trim() || 'Player 1';
+            const name2 = document.getElementById('p2-name').value.trim() || 'Player 2';
+            const name3 = document.getElementById('p3-name').value.trim() || 'Player 3';
+            const name4 = document.getElementById('p4-name').value.trim() || 'Player 4';
+
+            GAME_PLAYERS = [
+                { id: 'p1', name: name1, currentScore: 0, wind: 'East' },
+                { id: 'p2', name: name2, currentScore: 0, wind: 'South' },
+                { id: 'p3', name: name3, currentScore: 0, wind: 'West' },
+                { id: 'p4', name: name4, currentScore: 0, wind: 'North' }
+            ];
+
+            HANDS_HISTORY_LOG = [];
+            ACTIVE_HAND_NUMBER = 1;
+
+            // Transition UI panels display configurations matrices 
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-dashboard').classList.remove('hidden');
+
+            initializeWinnerDropdowns();
+            initializePenaltyDropdown();
+            synchronizeDashboardState();
+            triggerToast(`Mahjong Ledger active! Setup successful for ${name1}, ${name2}, ${name3}, and ${name4}.`);
+        }
+
+        // Populate dynamic drop-down selectors parameters list sets
+        function initializeWinnerDropdowns() {
+            const selectEl = document.getElementById('winner-select');
+            selectEl.innerHTML = '';
+
+            GAME_PLAYERS.forEach(player => {
+                const opt = document.createElement('option');
+                opt.value = player.id;
+                opt.innerText = `${player.name} (${player.wind})`;
+                selectEl.appendChild(opt);
+            });
+
+            updateDiscarderOptions();
+        }
+
+        function updateDiscarderOptions() {
+            const winnerVal = document.getElementById('winner-select').value;
+            const discarderSelect = document.getElementById('discarder-select');
+            discarderSelect.innerHTML = '';
+
+            GAME_PLAYERS.filter(p => p.id !== winnerVal).forEach(player => {
+                const opt = document.createElement('option');
+                opt.value = player.id;
+                opt.innerText = `${player.name} (${player.wind})`;
+                discarderSelect.appendChild(opt);
+            });
+        }
+
+        function initializePenaltyDropdown() {
+            const selectEl = document.getElementById('penalty-player-select');
+            selectEl.innerHTML = '';
+
+            GAME_PLAYERS.forEach(player => {
+                const opt = document.createElement('option');
+                opt.value = player.id;
+                opt.innerText = `${player.name} (${player.wind})`;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        // Logic toggle routing for modular parameters inputs sets
+        function setOutcomeMode(mode) {
+            CURRENT_OUTCOME_MODE = mode;
+            const winBtn = document.getElementById('outcome-win-btn');
+            const wallBtn = document.getElementById('outcome-wall-btn');
+            const fields = document.getElementById('conditional-win-fields');
+
+            if (mode === 'win') {
+                winBtn.className = "py-2.5 text-center text-xs font-bold rounded-lg border-2 border-emerald-700 bg-emerald-50 text-emerald-950 transition";
+                wallBtn.className = "py-2.5 text-center text-xs font-bold rounded-lg border border-stone-200 text-stone-500 bg-stone-50 hover:bg-stone-100 transition";
+                fields.classList.remove('hidden');
+            } else {
+                winBtn.className = "py-2.5 text-center text-xs font-bold rounded-lg border border-stone-200 text-stone-500 bg-stone-50 hover:bg-stone-100 transition";
+                wallBtn.className = "py-2.5 text-center text-xs font-bold rounded-lg border-2 border-emerald-700 bg-emerald-50 text-emerald-950 transition";
+                fields.classList.add('hidden');
+            }
+        }
+
+        function toggleDiscarderDropdown() {
+            const method = document.getElementById('method-select').value;
+            const container = document.getElementById('discarder-container');
+            if (method === 'discard') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Modal triggers state manipulation mechanisms handlers overlays
+        function openHandModal() {
+            setOutcomeMode('win');
+            document.getElementById('hand-log-form').reset();
+            toggleDiscarderDropdown();
+            updateDiscarderOptions();
+
+            const m = document.getElementById('hand-modal');
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.add('opacity-100'), 10);
+        }
+
+        function closeHandModal() {
+            const m = document.getElementById('hand-modal');
+            m.classList.remove('opacity-100');
+            setTimeout(() => m.classList.add('hidden'), 300);
+        }
+
+        function openPenaltyModal() {
+            document.getElementById('penalty-log-form').reset();
+            handlePenaltyTypeChange();
+            initializePenaltyDropdown();
+
+            const m = document.getElementById('penalty-modal');
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.add('opacity-100'), 10);
+        }
+
+        function closePenaltyModal() {
+            const m = document.getElementById('penalty-modal');
+            m.classList.remove('opacity-100');
+            setTimeout(() => m.classList.add('hidden'), 300);
+        }
+
+        function handlePenaltyTypeChange() {
+            const type = document.getElementById('penalty-type-select').value;
+            const container = document.getElementById('custom-penalty-container');
+            if (type === 'custom') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Score matrix transactional accounting processors logic computations
+        function processHandLog(event) {
+            event.preventDefault();
+
+            let handLogRecord = {
+                handNumber: ACTIVE_HAND_NUMBER,
+                outcome: CURRENT_OUTCOME_MODE,
+                winnerId: null,
+                method: null,
+                basePoints: 0,
+                jokerless: false,
+                pointsDelta: { p1: 0, p2: 0, p3: 0, p4: 0 }
+            };
+
+            if (CURRENT_OUTCOME_MODE === 'win') {
+                const winnerId = document.getElementById('winner-select').value;
+                const method = document.getElementById('method-select').value;
+                const baseVal = parseInt(document.getElementById('card-value-select').value);
+                const isJokerless = document.getElementById('jokerless-checkbox').checked;
+
+                let multiplier = isJokerless ? 2 : 1;
+                
+                handLogRecord.winnerId = winnerId;
+                handLogRecord.method = method;
+                handLogRecord.basePoints = baseVal;
+                handLogRecord.jokerless = isJokerless;
+
+                if (method === 'self-pick') {
+                    let perLoserCost = baseVal * 2 * multiplier;
+                    let totalWinnerGains = perLoserCost * 3;
+
+                    GAME_PLAYERS.forEach(player => {
+                        if (player.id === winnerId) {
+                            handLogRecord.pointsDelta[player.id] = totalWinnerGains;
+                        } else {
+                            handLogRecord.pointsDelta[player.id] = -perLoserCost;
+                        }
+                    });
+                } else {
+                    const discarderId = document.getElementById('discarder-select').value;
+                    let singleLoserCost = baseVal * 1 * multiplier;
+                    let doubleLoserCost = baseVal * 2 * multiplier;
+                    let totalWinnerGains = doubleLoserCost + (singleLoserCost * 2);
+
+                    GAME_PLAYERS.forEach(player => {
+                        if (player.id === winnerId) {
+                            handLogRecord.pointsDelta[player.id] = totalWinnerGains;
+                        } else if (player.id === discarderId) {
+                            handLogRecord.pointsDelta[player.id] = -doubleLoserCost;
+                        } else {
+                            handLogRecord.pointsDelta[player.id] = -singleLoserCost;
+                        }
+                    });
+                }
+            }
+
+            HANDS_HISTORY_LOG.push(handLogRecord);
+            
+            GAME_PLAYERS.forEach(player => {
+                player.currentScore += handLogRecord.pointsDelta[player.id];
+            });
+
+            rotateWinds();
+
+            ACTIVE_HAND_NUMBER += 1;
+            closeHandModal();
+            synchronizeDashboardState();
+            triggerToast(`Hand #${handLogRecord.handNumber} successfully written to transaction logs.`);
+        }
+
+        // Process a rules infraction deduction event loop
+        function processPenaltyLog(event) {
+            event.preventDefault();
+            const playerId = document.getElementById('penalty-player-select').value;
+            const typeSelect = document.getElementById('penalty-type-select').value;
+            
+            let penaltyAmount = 0;
+            let infractionName = '';
+
+            if (typeSelect === 'custom') {
+                penaltyAmount = parseInt(document.getElementById('custom-penalty-input').value) || 0;
+                infractionName = 'Custom Points Deduction';
+            } else {
+                penaltyAmount = parseInt(typeSelect);
+                if (typeSelect === '10') infractionName = 'Wrong Tile Exposure';
+                if (typeSelect === '20') infractionName = 'Miscalled Mahjong';
+                if (typeSelect === '25') infractionName = 'Illegal Wall Call';
+            }
+
+            let handLogRecord = {
+                handNumber: ACTIVE_HAND_NUMBER,
+                outcome: 'penalty',
+                winnerId: null,
+                method: null,
+                basePoints: penaltyAmount,
+                jokerless: false,
+                infraction: infractionName,
+                penalizedPlayerId: playerId,
+                pointsDelta: { p1: 0, p2: 0, p3: 0, p4: 0 }
+            };
+
+            handLogRecord.pointsDelta[playerId] = -penaltyAmount;
+
+            HANDS_HISTORY_LOG.push(handLogRecord);
+
+            GAME_PLAYERS.forEach(player => {
+                player.currentScore += handLogRecord.pointsDelta[player.id];
+            });
+
+            // Note: Standalone custom exposures do NOT step active hand numbers or change winds
+            closePenaltyModal();
+            synchronizeDashboardState();
+            const penalizedPlayer = GAME_PLAYERS.find(p => p.id === playerId);
+            triggerToast(`Penalty of -${penaltyAmount} points assigned to ${penalizedPlayer.name}.`);
+        }
+
+        // Classic Wind movement simulation routines mapping systems parameters
+        function rotateWinds() {
+            const windRotationOrder = ['East', 'South', 'West', 'North'];
+            GAME_PLAYERS.forEach(player => {
+                let currIdx = windRotationOrder.indexOf(player.wind);
+                let nextIdx = (currIdx + 1) % 4;
+                player.wind = windRotationOrder[nextIdx];
+            });
+            initializeWinnerDropdowns();
+            initializePenaltyDropdown();
+        }
+
+        // Inverse calculation handler to trace historical operations states 
+        function undoLastHand() {
+            if (HANDS_HISTORY_LOG.length === 0) return;
+
+            const poppedRecord = HANDS_HISTORY_LOG.pop();
+            
+            GAME_PLAYERS.forEach(player => {
+                player.currentScore -= poppedRecord.pointsDelta[player.id];
+            });
+
+            // Only rewind wind configurations if it was a true round completion log
+            if (poppedRecord.outcome !== 'penalty') {
+                const windRotationOrder = ['East', 'South', 'West', 'North'];
+                GAME_PLAYERS.forEach(player => {
+                    let currIdx = windRotationOrder.indexOf(player.wind);
+                    let prevIdx = (currIdx - 1 + 4) % 4;
+                    player.wind = windRotationOrder[prevIdx];
+                });
+                ACTIVE_HAND_NUMBER -= 1;
+            }
+
+            initializeWinnerDropdowns();
+            initializePenaltyDropdown();
+            synchronizeDashboardState();
+            
+            const logTypeStr = poppedRecord.outcome === 'penalty' ? 'Penalty log' : `Hand #${poppedRecord.handNumber} execution ledger`;
+            triggerToast(`${logTypeStr} changes reverted securely.`);
+        }
+
+        // Render synchronization interfaces components states logs 
+        function synchronizeDashboardState() {
+            document.getElementById('game-hand-counter').innerText = `Hand #${ACTIVE_HAND_NUMBER} Active`;
+            document.getElementById('ledger-count-badge').innerText = `${HANDS_HISTORY_LOG.length} Log${HANDS_HISTORY_LOG.length === 1 ? '' : 's'}`;
+
+            const undoBtn = document.getElementById('undo-btn');
+            if (HANDS_HISTORY_LOG.length > 0) {
+                undoBtn.disabled = false;
+                undoBtn.className = "px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold rounded-lg text-xs uppercase tracking-wider transition";
+            } else {
+                undoBtn.disabled = true;
+                undoBtn.className = "px-4 py-2.5 bg-stone-100 text-stone-400 cursor-not-allowed rounded-lg text-xs font-bold uppercase tracking-wider transition";
+            }
+
+            const scorecardsGrid = document.getElementById('player-scorecards');
+            scorecardsGrid.innerHTML = '';
+
+            GAME_PLAYERS.forEach(player => {
+                const scoreColorClass = player.currentScore >= 0 ? 'text-emerald-800' : 'text-rose-700';
+                const isDealer = player.wind === 'East';
+                
+                const cardHtml = `
+                    <div class="bg-white border ${isDealer ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-stone-200'} p-4 rounded-xl shadow-xs relative flex flex-col justify-between">
+                        ${isDealer ? '<span class="absolute top-2 right-2 bg-amber-600 text-white font-bold text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs">Dealer</span>' : ''}
+                        <div>
+                            <div class="text-[10px] uppercase font-bold tracking-widest text-stone-400">${player.wind} Wind Position</div>
+                            <h3 class="text-base font-bold text-stone-900 truncate mt-0.5">${player.name}</h3>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between">
+                            <span class="text-xs font-medium text-stone-400">Ledger Bal</span>
+                            <span class="text-2xl font-bold font-mono ${scoreColorClass}">${player.currentScore >= 0 ? '+' : ''}${player.currentScore}</span>
+                        </div>
+                    </div>
+                `;
+                scorecardsGrid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            const rowsContainer = document.getElementById('ledger-rows-container');
+            const emptyRow = document.getElementById('ledger-empty-row');
+
+            rowsContainer.querySelectorAll('.dynamic-log-row').forEach(el => el.remove());
+
+            if (HANDS_HISTORY_LOG.length === 0) {
+                emptyRow.classList.remove('hidden');
+            } else {
+                emptyRow.classList.add('hidden');
+                
+                HANDS_HISTORY_LOG.forEach(log => {
+                    let outcomeSummaryText = '';
+                    let typeMarkupText = '';
+                    let displayPointsExchanges = '';
+
+                    if (log.outcome === 'wall') {
+                        outcomeSummaryText = '<span class="text-stone-500 font-medium italic">Wall Game (Draw)</span>';
+                        typeMarkupText = '<span class="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">No Payout</span>';
+                        displayPointsExchanges = '<span class="font-mono text-stone-400 font-semibold">0</span>';
+                    } else if (log.outcome === 'penalty') {
+                        const penalizedObj = GAME_PLAYERS.find(p => p.id === log.penalizedPlayerId) || { name: 'Player' };
+                        outcomeSummaryText = `<span class="text-rose-700 font-semibold">⚠️ Penalty: ${penalizedObj.name}</span>`;
+                        typeMarkupText = `<span class="text-[11px] bg-rose-50 border border-rose-200 text-rose-800 px-2 py-0.5 rounded font-medium">${log.infraction}</span>`;
+                        displayPointsExchanges = `<span class="font-mono text-rose-700 font-bold">-${log.basePoints}</span>`;
+                    } else {
+                        const winnerObj = GAME_PLAYERS.find(p => p.id === log.winnerId) || { name: 'Winner' };
+                        outcomeSummaryText = `<span class="text-emerald-900 font-bold">🎉 Won by ${winnerObj.name}</span>`;
+                        
+                        let badgeSubString = log.method === 'self-pick' ? 'Self-Picked' : 'Discard Win';
+                        if (log.jokerless) badgeSubString += ' • Jokerless';
+                        typeMarkupText = `<span class="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-medium">${badgeSubString}</span>`;
+
+                        let breakdownStrings = [];
+                        Object.keys(log.pointsDelta).forEach(pKey => {
+                            const pName = (GAME_PLAYERS.find(pl => pl.id === pKey) || { name: '' }).name;
+                            const deltaVal = log.pointsDelta[pKey];
+                            breakdownStrings.push(`${pName}: ${deltaVal >= 0 ? '+' : ''}${deltaVal}`);
+                        });
+                        displayPointsExchanges = `<div class="text-[11px] font-mono text-stone-600 leading-tight">${breakdownStrings.join('<br>')}</div>`;
+                    }
+
+                    const trMarkup = `
+                        <tr class="dynamic-log-row border-b border-stone-100 hover:bg-stone-50/80 transition-all text-xs">
+                            <td class="py-3 px-4 font-mono font-bold text-stone-400">#${log.handNumber}</td>
+                            <td class="py-3 px-4">${outcomeSummaryText}</td>
+                            <td class="py-3 px-4">${typeMarkupText}</td>
+                            <td class="py-3 px-4 font-mono text-stone-500">${log.outcome === 'win' ? log.basePoints : (log.outcome === 'penalty' ? log.basePoints : '-')}</td>
+                            <td class="py-3 px-4 text-right">${displayPointsExchanges}</td>
+                        </tr>
+                    `;
+                    rowsContainer.insertAdjacentHTML('beforeend', trMarkup);
+                });
+            }
+        }
+
+        // Custom Notification Component engine logic layers
+        function triggerToast(message) {
+            const toast = document.getElementById('app-toast');
+            document.getElementById('toast-message-content').innerText = message;
+            
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+        }
+
+        function dismissToast() {
+            const toast = document.getElementById('app-toast');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }
+
+        // Custom Modals Prompt elements confirmations logic engines configurations overrides 
+        function promptResetGame() {
+            const c = document.getElementById('confirm-modal');
+            c.classList.remove('hidden');
+            setTimeout(() => c.classList.add('opacity-100'), 10);
+        }
+
+        function closeConfirmModal() {
+            const c = document.getElementById('confirm-modal');
+            c.classList.remove('opacity-100');
+            setTimeout(() => c.classList.add('hidden'), 300);
+        }
+
+        function executeResetGame() {
+            closeConfirmModal();
+            document.getElementById('game-dashboard').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('setup-form').reset();
+            document.getElementById('hand-log-form').reset();
+            document.getElementById('penalty-log-form').reset();
+            
+            GAME_PLAYERS = [];
+            HANDS_HISTORY_LOG = [];
+            ACTIVE_HAND_NUMBER = 1;
+            
+            triggerToast("Ledger tables and allocations successfully wiped clean.");
+        }
+    </script>
+</body>
+</html>
